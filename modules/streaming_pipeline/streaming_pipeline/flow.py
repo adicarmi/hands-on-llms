@@ -13,6 +13,7 @@ from streaming_pipeline import mocked
 from streaming_pipeline.alpaca_batch import AlpacaNewsBatchInput
 from streaming_pipeline.alpaca_stream import AlpacaNewsStreamInput
 from streaming_pipeline.embeddings import EmbeddingModelSingleton
+from streaming_pipeline.chunking import ChunkingSingleton
 from streaming_pipeline.models import NewsArticle
 from streaming_pipeline.qdrant import QdrantVectorOutput
 
@@ -39,6 +40,7 @@ def build(
     """
 
     model = EmbeddingModelSingleton(cache_dir=model_cache_dir)
+    chunker = ChunkingSingleton()
     is_input_mocked = debug is True and is_batch is False
 
     flow = Dataflow()
@@ -52,7 +54,7 @@ def build(
     if debug:
         flow.inspect(print)
     flow.map(lambda article: article.to_document())
-    flow.map(lambda document: document.compute_chunks(model))
+    flow.map(lambda document: document.compute_chunks(model, chunker))
     flow.map(lambda document: document.compute_embeddings(model))
     flow.output("output", _build_output(model, in_memory=debug))
 

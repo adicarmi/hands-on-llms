@@ -16,6 +16,7 @@ from unstructured.cleaners.core import (
 
 from financial_bot.embeddings import EmbeddingModelSingleton
 from financial_bot.template import PromptTemplate
+from datetime import datetime
 
 
 class StatelessMemorySequentialChain(chains.SequentialChain):
@@ -122,14 +123,18 @@ class ContextExtractorChain(Chain):
         # (or other time frame).
         matches = self.vector_store.search(
             query_vector=embeddings,
-            k=self.top_k,
+            limit=self.top_k,
             collection_name=self.vector_collection,
         )
 
-        context = ""
-        for match in matches:
-            context += match.payload["summary"] + "\n"
+        # sort matches by most recent
+        matches.sort(key=lambda m: datetime.fromisoformat(m.payload['created_at']), reverse=True)
 
+        context = ""
+        # remove duplicates before concatination 
+        for match in matches:
+            context += match.payload["text"] + "\n"
+        #breakpoint()
         return {
             "context": context,
         }
@@ -189,7 +194,7 @@ class FinancialBotQAChain(Chain):
                 "question": inputs["question"],
             }
         )
-
+        # breakpoint()
         start_time = time.time()
         response = self.hf_pipeline(prompt["prompt"])
         end_time = time.time()
@@ -211,7 +216,7 @@ class FinancialBotQAChain(Chain):
                     "duration_milliseconds": duration_milliseconds,
                 },
             )
-
+        # breakpoint()
         return {"answer": response}
 
     def clean(self, inputs: Dict[str, str]) -> Dict[str, str]:

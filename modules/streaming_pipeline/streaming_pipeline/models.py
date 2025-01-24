@@ -8,10 +8,16 @@ from unstructured.cleaners.core import (
     clean_non_ascii_chars,
     replace_unicode_quotes,
 )
+
 from unstructured.partition.html import partition_html
+from streaming_pipeline.chunking import chunk_by_prefixed_attention_windows
 from unstructured.staging.huggingface import chunk_by_attention_window
 
 from streaming_pipeline.embeddings import EmbeddingModelSingleton
+from streaming_pipeline.chunking import ChunkingSingleton
+
+# from streaming_pipeline.topic_by_entities import extract_and_resolve_entities
+from streaming_pipeline.topic_by_entities import extract_top_entities_as_string
 
 
 class NewsArticle(BaseModel):
@@ -111,17 +117,17 @@ class Document(BaseModel):
         payloads = []
         ids = []
         for chunk in self.chunks:
-            payload = self.metadata
+            payload = self.metadata.copy()
             payload.update({"text": chunk})
             # Create the chunk ID using the hash of the chunk to avoid storing duplicates.
             chunk_id = hashlib.md5(chunk.encode()).hexdigest()
 
             payloads.append(payload)
             ids.append(chunk_id)
-
+        #breakpoint()
         return ids, payloads
 
-    def compute_chunks(self, model: EmbeddingModelSingleton) -> "Document":
+    def compute_chunks(self, model: EmbeddingModelSingleton, chunker: ChunkingSingleton) -> "Document":
         """
         Computes the chunks of the document.
 
@@ -131,14 +137,23 @@ class Document(BaseModel):
         Returns:
             Document: The document object with the computed chunks.
         """
+        # Generate chunk prefix from document metadata symbols
+        chunk_prefix = " ".join(self.metadata.get("symbols", [])) if "symbols" in self.metadata else ""
+        chunk_prefix = "Stocks " + chunk_prefix
+        top_entities_string = extract_top_entities_as_string(self.text[2], similarity_threshold=80, entity_types=["PERSON", "ORG", "PRODUCT", "WORK_OF_ART"], max_n=3)
+        
+        chunk_prefix += " Keywords[" + top_entities_string + "] "
+        #breakpoint()
 
         for item in self.text:
-            chunked_item = chunk_by_attention_window(
-                item, model.tokenizer, max_input_size=model.max_input_length
-            )
+            # chunked_item = chunk_by_prefixed_attention_windows(
+            #     item, model.tokenizer, max_input_size=model.max_input_length, prefix = chunk_prefix
+            # )
+
+            chunked_item = chunker.chunk_by_semantic(text = item, max_input_size = model.max_input_length, tokenizer = model.tokenizer, prefix = chunk_prefix)
 
             self.chunks.extend(chunked_item)
-
+        #breakpoint()
         return self
 
     def compute_embeddings(self, model: EmbeddingModelSingleton) -> "Document":
@@ -156,5 +171,5 @@ class Document(BaseModel):
             embedding = model(chunk, to_list=True)
 
             self.embeddings.append(embedding)
-
+        #breakpoint()
         return self

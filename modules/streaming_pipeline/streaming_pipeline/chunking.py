@@ -1,11 +1,13 @@
-import datetime
-from typing import List, Tuple
+import logging
 from copy import deepcopy
 from typing import Callable, List, Optional
 
 from transformers import PreTrainedTokenizer
-
 from unstructured.documents.elements import Element, NarrativeText, Text
+from chonkie import SemanticChunker
+from streaming_pipeline.base import SingletonMeta
+
+logger = logging.getLogger(__name__)
 
 
 def chunk_by_prefixed_attention_windows(
@@ -87,53 +89,67 @@ def chunk_by_prefixed_attention_windows(
 
     return chunks
 
-def read_requirements(file_path: str) -> List[str]:
+
+
+class ChunkingSingleton(metaclass=SingletonMeta):
     """
-    Reads a file containing a list of requirements and returns them as a list of strings.
+    Singleton class for semantic text chunking using the SemanticChunker.
 
-    Args:
-        file_path (str): The path to the file containing the requirements.
-
-    Returns:
-        List[str]: A list of requirements as strings.
+    This class ensures that a single instance of the SemanticChunker is used across the application.
     """
 
-    with open(file_path, "r") as file:
-        requirements = [line.strip() for line in file if line.strip()]
+    def __init__(self):
+        """
+        Initializes the ChunkingSingleton with a default SemanticChunker instance.
+        """
+        self.chunker = SemanticChunker(
+            embedding_model="sentence-transformers/all-MiniLM-L6-v2",  # Pretrained model for sentence embeddings
+            threshold=0.5,  # Similarity threshold for determining chunk boundaries
+            chunk_size=384,  # Maximum number of tokens per chunk
+            min_sentences=1  # Minimum number of sentences per chunk
+        )
 
-    return requirements
+    def chunk_by_semantic(
+        self,
+        text: str,
+        max_input_size: int,
+        tokenizer: PreTrainedTokenizer,
+        prefix: str = ""
+    ) -> List[str]:
+        """
+        Chunk text into semantically meaningful chunks, ensuring each chunk fits within a specified token limit.
 
+        Args:
+            text (str): The text to be chunked.
+            max_input_size (int): Maximum number of tokens allowed in each chunk (including the prefix).
+            tokenizer (PreTrainedTokenizer): Tokenizer used to calculate token counts.
+            prefix (str): Fixed string to prepend to each chunk.
 
-def split_time_range_into_intervals(
-    from_datetime: datetime.datetime, to_datetime: datetime.datetime, n: int
-) -> List[Tuple[datetime.datetime, datetime.datetime]]:
-    """
-    Splits a time range [from_datetime, to_datetime] into N equal intervals.
+        Returns:
+            List[str]: A list of text chunks with the prefix prepended, ensuring token counts fit within max_input_size.
 
-    Args:
-        from_datetime (datetime): The starting datetime object.
-        to_datetime (datetime): The ending datetime object.
-        n (int): The number of intervals.
+        Raises:
+            ValueError: If the tokenized prefix exceeds max_input_size.
+        """
+        # Tokenize the prefix to calculate its token count
+        prefix_tokens = tokenizer.tokenize(prefix)
+        prefix_token_count = len(prefix_tokens)
 
-    Returns:
-        List of tuples: A list where each tuple contains the start and end datetime objects for each interval.
-    """
+        # Validate that the prefix length is less than the maximum input size
+        if prefix_token_count >= max_input_size:
+            raise ValueError(
+                f"The prefix is too long ({prefix_token_count} tokens) to fit within the max_input_size ({max_input_size})."
+            )
 
-    # Calculate total duration between from_datetime and to_datetime.
-    total_duration = to_datetime - from_datetime
+        # Adjust the maximum chunk size to account for the prefix length
+        max_chunk_size = max_input_size - prefix_token_count
 
-    # Calculate the length of each interval.
-    interval_length = total_duration / n
+        # Set the chunk size for the SemanticChunker
+        self.chunker.chunk_size = max_chunk_size
 
-    # Generate the interval.
-    intervals = []
-    for i in range(n):
-        interval_start = from_datetime + (i * interval_length)
-        interval_end = from_datetime + ((i + 1) * interval_length)
-        if i + 1 != n:
-            # Subtract 1 microsecond from the end of each interval to avoid overlapping.
-            interval_end = interval_end - datetime.timedelta(minutes=1)
+        # Perform semantic chunking
+        raw_chunks = self.chunker.chunk(text)
 
-        intervals.append((interval_start, interval_end))
+        # Append the prefix to each chunk and return the list of chunks
+        return [f"{prefix}{chunk.text}" for chunk in raw_chunks]
 
-    return intervals

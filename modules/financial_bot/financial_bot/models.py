@@ -20,6 +20,10 @@ from transformers import (
 from financial_bot import constants
 from financial_bot.utils import MockedPipeline
 
+from transformers import set_seed
+
+set_seed(42)
+
 logger = logging.getLogger(__name__)
 
 
@@ -149,11 +153,14 @@ def build_huggingface_pipeline(
         streamer = TextIteratorStreamer(
             tokenizer, timeout=10.0, skip_prompt=True, skip_special_tokens=True
         )
-        stop_on_tokens = StopOnTokens(stop_ids=[tokenizer.eos_token_id])
-        stopping_criteria = StoppingCriteriaList([stop_on_tokens])
+        # stop_on_tokens = StopOnTokens(stop_ids=[tokenizer.eos_token_id])
+        # stopping_criteria = StoppingCriteriaList([stop_on_tokens])
     else:
         streamer = None
-        stopping_criteria = StoppingCriteriaList([])
+        # stopping_criteria = StoppingCriteriaList([])
+    
+    stop_on_tokens = StopOnTokens(stop_ids=[tokenizer.eos_token_id])
+    stopping_criteria = StoppingCriteriaList([stop_on_tokens])
 
     pipe = pipeline(
         "text-generation",
@@ -161,6 +168,11 @@ def build_huggingface_pipeline(
         tokenizer=tokenizer,
         max_new_tokens=max_new_tokens,
         temperature=temperature,
+        #do_sample = True,
+        #top_k=100,         # Consider top 50 options for diversity
+        # top_p=0.9,
+        no_repeat_ngram_size=3,
+        repetition_penalty=1.2,
         streamer=streamer,
         stopping_criteria=stopping_criteria,
     )

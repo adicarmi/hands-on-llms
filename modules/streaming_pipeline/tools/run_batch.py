@@ -32,14 +32,27 @@ def build_flow(
 
     to_datetime = datetime.datetime.now()
     from_datetime = to_datetime - datetime.timedelta(days=latest_n_days)
+
+    fixed_to_datetime = datetime.datetime.strptime("2025-01-17 14:23:56.123456", "%Y-%m-%d %H:%M:%S.%f")
+    fixed_from_datetime = fixed_to_datetime - datetime.timedelta(days=latest_n_days)
+
+    
     logger.info(
         f"Extracting news from {from_datetime} to {to_datetime} [n_days={latest_n_days}]"
     )
 
+    # flow = flow_builder(
+    #     is_batch=True,
+    #     from_datetime=from_datetime,
+    #     to_datetime=to_datetime,
+    #     model_cache_dir=model_cache_dir,
+    #     debug=debug,
+    # )
+
     flow = flow_builder(
         is_batch=True,
-        from_datetime=from_datetime,
-        to_datetime=to_datetime,
+        from_datetime=fixed_from_datetime,
+        to_datetime=fixed_to_datetime,
         model_cache_dir=model_cache_dir,
         debug=debug,
     )

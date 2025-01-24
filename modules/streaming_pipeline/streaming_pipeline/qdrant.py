@@ -3,7 +3,7 @@ from typing import Optional
 
 from bytewax.outputs import DynamicOutput, StatelessSink
 from qdrant_client import QdrantClient
-from qdrant_client.http.api_client import UnexpectedResponse
+from qdrant_client.http.api_client import UnexpectedResponse, ResponseHandlingException
 from qdrant_client.http.models import Distance, VectorParams, OptimizersConfigDiff
 from qdrant_client.models import PointStruct
 
@@ -40,7 +40,7 @@ class QdrantVectorOutput(DynamicOutput):
 
         try:
             self.client.get_collection(collection_name=self._collection_name)
-        except (UnexpectedResponse, ValueError):
+        except (ResponseHandlingException, UnexpectedResponse, ValueError):
             self.client.recreate_collection(
                 collection_name=self._collection_name,
                 vectors_config=VectorParams(

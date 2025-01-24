@@ -6,7 +6,7 @@ EMBEDDING_MODEL_MAX_INPUT_LENGTH = 384
 
 # == VECTOR Database ==
 VECTOR_DB_OUTPUT_COLLECTION_NAME = "alpaca_financial_news"
-VECTOR_DB_SEARCH_TOPK = 1
+VECTOR_DB_SEARCH_TOPK = 3
 
 # == LLM Model ==
 LLM_MODEL_ID = "tiiuae/falcon-7b-instruct"

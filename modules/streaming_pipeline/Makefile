@@ -10,7 +10,8 @@ install:
 	@echo "Installing streaming pipeline..."
 	
 	poetry env use $(shell which python3.10) && \
-	PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring poetry install
+	PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring poetry install  && \
+	poetry run python -m spacy download en_core_web_sm
 
 install_dev: install
 	PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring poetry install --with dev
@@ -34,7 +35,7 @@ run_real_time_dev:
 	RUST_BACKTRACE=full poetry run python -m bytewax.run "tools.run_real_time:build_flow(debug=True)"
 
 run_batch:
-	RUST_BACKTRACE=full poetry run python -m bytewax.run "tools.run_batch:build_flow(latest_n_days=8, debug=True)"
+	RUST_BACKTRACE=full poetry run python -m bytewax.run "tools.run_batch:build_flow(latest_n_days=14, debug=False)"
 
 run_batch_dev:
 	RUST_BACKTRACE=full poetry run python -m bytewax.run "tools.run_batch:build_flow(latest_n_days=2, debug=True)"
