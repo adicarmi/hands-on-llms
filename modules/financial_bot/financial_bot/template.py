@@ -106,7 +106,9 @@ register_llm_template(
     PromptTemplate(
         name="falcon",
         system_template=">>INTRODUCTION<< {system_message}",
-        system_message="You are a helpful assistant, with financial expertise.",
+        system_message="You are a helpful assistant, with financial expertise." 
+        "Your responses must be accurate, concise, grounded to information in the DOMAIN. "
+        "Prioritize user understanding, avoid misleading statements.",
         context_template=">>DOMAIN<< {user_context}\n{news_context}",
         chat_history_template=">>SUMMARY<< {chat_history}",
         question_template=">>QUESTION<< {question}",
