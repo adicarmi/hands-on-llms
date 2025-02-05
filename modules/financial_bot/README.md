@@ -85,7 +85,10 @@ Evaluate the bot locally on the test set split of the training pipeline (require
 ```shell
 make eval_bot
 ```
-
+Evaluate the bot locally on the test set split of the training pipeline (requires an OpenAI API key). Export results to a json file, including question, context and response for each test sample. calculate the avarage. 
+```shell
+make smart_eval_bot
+```
 
 ## 3.2. Beam | RESTful API
 `deploy the financial bot as a RESTful API to Beam [optional]` 
