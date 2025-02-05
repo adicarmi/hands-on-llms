@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 # Path to the folder to track all changes to the local folder
 code_folder_path = "../../"
 
-EXPERIMENT_NAME = "exp6"
+EXPERIMENT_NAME = "trial"
 
 
 
@@ -57,7 +57,7 @@ def run_local(
         answer_similarity,
         #context_entity_recall,
         context_recall,
-        context_relevancy,
+        #context_relevancy,
         #context_utilization,
         faithfulness
     )
@@ -68,7 +68,7 @@ def run_local(
         context_recall,
         answer_similarity,
         #context_entity_recall,
-        answer_correctness,
+        #answer_correctness,
         faithfulness
     ]
     
@@ -97,7 +97,7 @@ def run_local(
 
             output_context = bot.finbot_chain.chains[0].run(input_payload)
             response = bot.answer(**input_payload)
-
+            #breakpoint()
             score = evaluate_w_ragas(
                 query=elem["question"],
                 context=output_context.split('\n'),
